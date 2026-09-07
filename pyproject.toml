@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "carrera-control"
+version = "0.1.0"
+description = "Camera-guided Carrera Digital 132 controller using a Pico-driven CU throttle signal."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy==2.2.6",
+    "opencv-python==4.12.0.88",
+    "pyserial==3.5",
+]
+
+[project.optional-dependencies]
+appconnect = ["carreralib==1.0.3"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+carrera-control = "carrera_control.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
