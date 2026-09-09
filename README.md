@@ -36,6 +36,7 @@ Kamera
   - CLI und Ausgabedateien
 
 ## Schnellstart
+Zuerst einen Carrera-Handregler an die Bahn anschließen und das Fahrzeug diesem Regler zuordnen. Prüfen, dass sich das Fahrzeug mit diesem Regler fahren lässt. Anschließend den „Connect +/2.0“-Dongle aus der Buchse der Control Unit (CU) entfernen und den RJ12-Stecker des Pico-Aufbaus in dieselbe Buchse stecken.
 
 Aus dem Ordner `carrera_project` in PowerShell:
 

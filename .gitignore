@@ -7,6 +7,5 @@ __pycache__/
 data/
 *.log
 *.csv
-*.jpg
 *.png
 config/local.toml
