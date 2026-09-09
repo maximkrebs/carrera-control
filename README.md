@@ -1,9 +1,9 @@
 # Carrera Control
 
-Kameragestuetzte Steuerung fuer ein Carrera Digital 132 Slotcar.
+Kameragestützte Steuerung für ein Carrera Digital 132 Slotcar.
 
 Der Laptop erkennt das Fahrzeug, verarbeitet eine aufgezeichnete Recognition-Lap,
-erzeugt daraus einen geschlossenen TrackGraph und steuert die CU-Gasstufe ueber
+erzeugt daraus einen geschlossenen TrackGraph und steuert die CU-Gasstufe über
 einen Raspberry Pi Pico.
 
 ## Architektur
@@ -66,25 +66,25 @@ python -m carrera_control.cli train `
   --web-port 8090
 ```
 
-Die WebUI ist waehrend des Laufs unter `http://127.0.0.1:8090/` erreichbar.
+Die WebUI ist während des Laufs unter `http://127.0.0.1:8090/` erreichbar.
 
 ## Projektstruktur
 
 ```text
 carrera_project/
-├── config/                  # lokale Konfiguration, falls benoetigt
+├── config/                  # lokale Konfiguration, falls benötigt
 ├── data/                    # generierte Recognition-, Trainings- und Fahrdaten
-├── pico/                    # Firmware fuer den Raspberry Pi Pico
+├── pico/                    # Firmware für den Raspberry Pi Pico
 ├── carrera_control/         # Laptop-Anwendung
 ├── tests/                   # automatisierte Tests
-├── pyproject.toml           # Paket- und Abhaengigkeitsdefinition
-└── README.md                # diese Projektuebersicht
+├── pyproject.toml           # Paket- und Abhängigkeitsdefinition
+└── README.md                # diese Projektübersicht
 ```
 
 ## Sicherheit
 
-- Gueltige CU-Stufen liegen zwischen `0` und `15`.
+- Gültige CU-Stufen liegen zwischen `0` und `15`.
 - Stufen unter `4` starten das Fahrzeug normalerweise nicht.
 - Der Pico setzt die PWM nach 500 ms ohne neuen Befehl auf Stufe `0`.
 - Bei verlorener Erkennung, Off-track oder Stillstand wird ebenfalls Stufe `0` gesendet.
-- Live-Tests zuerst kurz und mit niedriger Stufe ausfuehren.
+- Live-Tests zuerst kurz und mit niedriger Stufe ausführen.

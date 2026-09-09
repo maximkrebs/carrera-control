@@ -95,11 +95,14 @@ def record_calibration_lap(
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_height)
     if not capture.isOpened():
         capture.release()
+        _write_run(run_dir, progress.path, completed, stage, camera_index, node_spacing_px, smoothing_window, "camera_open_failed")
         raise RuntimeError(f"Camera {camera_index} could not be opened.")
 
     controller = CarreraCuController(port=port, baudrate=baudrate)
+    controller_open = False
     try:
         controller.open()
+        controller_open = True
         controller.set_stage(stage)
         while time.monotonic() - started_at < timeout_s:
             received, frame = capture.read()
@@ -132,12 +135,15 @@ def record_calibration_lap(
                 if cv2.waitKey(1) & 0xFF in {ord("q"), 27}:
                     break
     finally:
-        controller.stop()
-        controller.close()
-        capture.release()
-        cv2.destroyAllWindows()
+        try:
+            if controller_open:
+                controller.stop()
+        finally:
+            controller.close()
+            capture.release()
+            cv2.destroyAllWindows()
+            _write_run(run_dir, progress.path, completed, stage, camera_index, node_spacing_px, smoothing_window, stop_reason)
 
-    _write_run(run_dir, progress.path, completed, stage, camera_index, node_spacing_px, smoothing_window, stop_reason)
     return run_dir
 
 

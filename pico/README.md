@@ -1,6 +1,6 @@
 # Pico-Firmware
 
-Dieser Ordner enthaelt die MicroPython-Firmware, die auf dem Raspberry Pi Pico
+Dieser Ordner enthält die MicroPython-Firmware, die auf dem Raspberry Pi Pico
 als `main.py` gespeichert wird.
 
 ## Aufgabe
@@ -12,7 +12,7 @@ Laptop -> USB-Serial -> Pico GP0 PWM -> RC-Glied -> Carrera Control Unit
 ```
 
 Die Firmware steuert keinen Motor und keinen mechanischen Slider. Sie erzeugt
-direkt das PWM-Signal fuer die CU.
+ direkt das PWM-Signal für die CU.
 
 ## Hardware
 
@@ -22,8 +22,18 @@ direkt das PWM-Signal fuer die CU.
 - RC-Glied: `2 kOhm` in Reihe und `100 nF` gegen Masse
 - CU-Gassignal: RJ11 Pin 5
 - gemeinsame Masse: RJ11 Pin 2
-- CU-Aufloesung: 16 Stufen von `0` bis `15`
+- CU-Auflösung: 16 Stufen von `0` bis `15`
 - unterhalb Stufe `4` startet das Fahrzeug normalerweise nicht
+
+## Bilder zum Aufbau
+
+![Verdrahtung auf dem Breadboard](pictures_setup/breadboard_wiring.jpg)
+
+![Kabelverbindung](pictures_setup/cable.jpg)
+
+![Pico-Pinbelegung](pictures_setup/pico_pins.jpg)
+
+![RJ12-Pinbelegung](pictures_setup/pins_rj12.jpg)
 
 ## Firmware
 
@@ -42,8 +52,8 @@ Sie erwartet pro Zeile eine einzelne Ganzzahl:
 8
 ```
 
-Die Eingabe wird auf `0..15` begrenzt. Eine gueltige Eingabe wird als Bestaetigung
-zurueckgesendet:
+Die Eingabe wird auf `0..15` begrenzt. Eine gültige Eingabe wird als Bestätigung
+zurückgesendet:
 
 ```text
 8
@@ -51,11 +61,11 @@ zurueckgesendet:
 
 ## Watchdog
 
-Kommt 500 ms lang kein gueltiger neuer Befehl vom Laptop, setzt der Pico die
-PWM automatisch auf Stufe `0`. Dieser Watchdog ist unabhaengig davon, ob der
-Laptop-Prozess abstuerzt oder die USB-Verbindung abbricht.
+Kommt 500 ms lang kein gültiger neuer Befehl vom Laptop, setzt der Pico die
+PWM automatisch auf Stufe `0`. Dieser Watchdog ist unabhängig davon, ob der
+Laptop-Prozess abstürzt oder die USB-Verbindung abbricht.
 
-Der Laptop-Regelkreis muss deshalb regelmaessig senden. Der schnelle Pfad dafuer
+Der Laptop-Regelkreis muss deshalb regelmäßig senden. Der schnelle Pfad dafür
 ist `CarreraCuController.set_stage_fast(...)`.
 
 ## Firmware aufspielen
@@ -67,14 +77,14 @@ python -m pip install mpremote
 python -m mpremote connect COM4 fs cp pico\main.py :main.py + reset
 ```
 
-Pruefen, ob der Pico erkannt wird:
+Prüfen, ob der Pico erkannt wird:
 
 ```powershell
 python -m mpremote devs
 ```
 
-Thonny oder ein anderer serieller Monitor darf COM4 waehrend des Uploads und
-des Laptop-Tests nicht geoeffnet haben.
+Thonny oder ein anderer serieller Monitor darf COM4 während des Uploads und
+des Laptop-Tests nicht geöffnet haben.
 
 ## Laptop-Protokolltest
 

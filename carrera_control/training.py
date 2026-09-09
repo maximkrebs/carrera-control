@@ -34,6 +34,7 @@ class TrainingConfig:
     crash_search_window_segments: int = 2
     crash_search_expansion_segments: int = 2
     crash_peak_margin: float = 0.5
+    crash_cooldown_laps: int = 3
 
     def __post_init__(self) -> None:
         if self.segment_count < 3:
@@ -50,6 +51,8 @@ class TrainingConfig:
             raise ValueError("crash search window values must be positive.")
         if self.crash_peak_margin < 0:
             raise ValueError("crash_peak_margin must not be negative.")
+        if self.crash_cooldown_laps < 0:
+            raise ValueError("crash_cooldown_laps must not be negative.")
 
 
 @dataclass
@@ -63,7 +66,12 @@ class SegmentProfile:
     incident_sites: list[int]
     preferred_segments: list[int]
     config: TrainingConfig
+    cooldown_laps: list[int] = field(default_factory=list)
     lap_count: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.cooldown_laps:
+            self.cooldown_laps = [0] * self.segment_count
 
     @property
     def segment_count(self) -> int:
@@ -83,18 +91,26 @@ class SegmentProfile:
     def record_clean_lap(self) -> int | None:
         """Reward one preferred unexplored segment and return its index.
 
-        A clean lap changes one segment only. Candidates are ordered by corner
-        exit priority, then by lowest current stage and fewest prior updates.
+        A clean lap changes one segment only. Corner exit segments are only
+        prioritized until each has received its first update once, so that
+        other segments are not starved of updates forever afterwards. Segments
+        still cooling down after a crash are excluded so a reduction isn't
+        immediately undone on the very next clean lap.
         """
         self.lap_count += 1
+        self._tick_cooldowns()
         candidates = [
             index
-            for index, stage in enumerate(self.stages)
-            if stage < self.config.maximum_stage and index in self.preferred_segments
+            for index in self.preferred_segments
+            if self.stages[index] < self.config.maximum_stage
+            and self.clean_laps[index] == 0
+            and self.cooldown_laps[index] == 0
         ]
         if not candidates:
             candidates = [
-                index for index, stage in enumerate(self.stages) if stage < self.config.maximum_stage
+                index
+                for index, stage in enumerate(self.stages)
+                if stage < self.config.maximum_stage and self.cooldown_laps[index] == 0
             ]
         if not candidates:
             return None
@@ -113,6 +129,7 @@ class SegmentProfile:
         search window for that site.
         """
         self._check_segment(segment)
+        self._tick_cooldowns()
         self.incident_sites[segment] += 1
         cause_segment = self._find_crash_cause(segment)
         self._reduce_segment(cause_segment)
@@ -140,15 +157,24 @@ class SegmentProfile:
         return incident_segment
 
     def _reduce_segment(self, segment: int) -> None:
+        # Crash penalties do not touch accumulated_squared_updates: that
+        # accumulator only tracks clean-lap increases, so a segment reduced
+        # after a crash still gets a normal-sized learning rate to try again,
+        # instead of being frozen near its floor forever.
         penalty = self.config.crash_penalty
         self.stages[segment] = max(self.config.minimum_stage, self.stages[segment] - penalty)
-        self.accumulated_squared_updates[segment] += penalty * penalty
         self.crashes[segment] += 1
         self.clean_laps[segment] = 0
+        self.cooldown_laps[segment] = self.config.crash_cooldown_laps
 
     def _apply_update(self, segment: int, update: float) -> None:
         self.stages[segment] = min(self.config.maximum_stage, self.stages[segment] + update)
         self.accumulated_squared_updates[segment] += update * update
+
+    def _tick_cooldowns(self) -> None:
+        for index, remaining in enumerate(self.cooldown_laps):
+            if remaining > 0:
+                self.cooldown_laps[index] = remaining - 1
 
     def _check_segment(self, segment: int) -> None:
         if not 0 <= segment < self.segment_count:
@@ -211,6 +237,7 @@ def save_profile(profile: SegmentProfile, path: str | Path) -> Path:
         "crashes": profile.crashes,
         "incident_sites": profile.incident_sites,
         "preferred_segments": profile.preferred_segments,
+        "cooldown_laps": profile.cooldown_laps,
         "lap_count": profile.lap_count,
         "config": profile.config.__dict__,
     }
@@ -230,6 +257,7 @@ def load_profile(path: str | Path) -> SegmentProfile:
         incident_sites=[int(value) for value in payload.get("incident_sites", payload["crashes"])],
         preferred_segments=[int(value) for value in payload["preferred_segments"]],
         config=config,
+        cooldown_laps=[int(value) for value in payload.get("cooldown_laps", [0] * config.segment_count)],
         lap_count=int(payload.get("lap_count", 0)),
     )
     if profile.segment_count != config.segment_count:

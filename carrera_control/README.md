@@ -1,24 +1,24 @@
 # carrera_control
 
-Das Paket `carrera_control` ist die Laptop-seitige Anwendung. Es enthaelt keine
-MicroPython-Firmware. Die Firmware liegt separat unter [pico/](../../pico/).
+Das Paket `carrera_control` ist die Laptop-seitige Anwendung. Es enthält keine
+MicroPython-Firmware. Die Firmware liegt separat unter [pico/](../pico/).
 
 ## Module
 
 ### Hardware und Sicherheit
 
-- [cu_controller.py](cu_controller.py): oeffnet COM4, sendet CU-Stufen und prueft Bestaetigungen
-- `set_stage(...)`: bestaetigter, blockierender Befehl fuer Tests und Diagnose
-- `set_stage_fast(...)`: nicht blockierender Befehl fuer den Regelkreis
+- [cu_controller.py](cu_controller.py): öffnet COM4, sendet CU-Stufen und prüft Bestätigungen
+- `set_stage(...)`: bestätigter, blockierender Befehl für Tests und Diagnose
+- `set_stage_fast(...)`: nicht blockierender Befehl für den Regelkreis
 - [stage_control.py](stage_control.py): Slow Start und Stufenbegrenzung
 
 ### Kamera und Strecke
 
 - [vision.py](vision.py): HSV-Farberkennung des Fahrzeugmarkers
 - [calibration_lap.py](calibration_lap.py): eine feste Recognition-Lap aufnehmen
-- [track_graph.py](track_graph.py): Positionsspur glaetten, resampeln und als geschlossenen Graph speichern
+- [track_graph.py](track_graph.py): Positionsspur glätten, resampeln und als geschlossenen Graph speichern
 
-Eine Recognition-Lap erzeugt:
+Eine vollständige Recognition-Lap erzeugt:
 
 ```text
 <run>/
@@ -27,13 +27,17 @@ Eine Recognition-Lap erzeugt:
 └── track_graph.json
 ```
 
+Bei Timeout, manueller Beendigung oder verlorener Fahrzeugerkennung werden
+`path.csv` und `metadata.json` trotzdem gespeichert. `track_graph.json` wird
+nur für eine vollständig gefahrene Runde erzeugt.
+
 ### Training und Fahren
 
-- [training.py](training.py): konservatives Segmentprofil, Kurvenausgaenge, AdaGrad-aehnliche Lernrate und Unfall-Peak-Suche
+- [training.py](training.py): konservatives Segmentprofil, Kurvenausgänge, AdaGrad-ähnliche Lernrate und Unfall-Peak-Suche
 - [training_runtime.py](training_runtime.py): Live-Kamera-Loop, Rundenzeit, Lost/Off-track/Stall, Speicherung und WebUI-Status
 - [autonomous_drive.py](autonomous_drive.py): automatisches Fahren mit dem schnellsten unfallfreien Profil
 - [web_ui.py](web_ui.py): lokale Statusseite mit Kamerabild, Trackkarte, Gefahrenstellen, Rundenzeiten und Profilbalken
-- [cli.py](cli.py): Kommandozeile fuer Recognition-Lap, Training und Drive
+- [cli.py](cli.py): Kommandozeile für Recognition-Lap, Training und Drive
 
 ## Laufmodi
 
@@ -47,7 +51,7 @@ python -m carrera_control.cli recognition-lap `
   --camera-index 1
 ```
 
-Die feste Stufe wird nur fuer die Streckenaufzeichnung verwendet. Es findet
+Die feste Stufe wird nur für die Streckenaufzeichnung verwendet. Es findet
 noch kein Training statt.
 
 ### Training
@@ -60,7 +64,7 @@ python -m carrera_control.cli train `
   --web-port 8090
 ```
 
-Das Training startet konservativ, nutzt einen Slow Start und erhoeht nach
+Das Training startet konservativ, nutzt einen Slow Start und erhöht nach
 sauberen Runden einzelne Segmente. Bei `vehicle_lost`, `off_track` oder
 `stalled` wird Stufe `0` gesendet und die Unfalllogik reduziert einen
 vermuteten vorherigen Geschwindigkeits-Peak.
@@ -76,7 +80,7 @@ Ein Trainingslauf erzeugt:
 └── runtime_state.json
 ```
 
-Die WebUI ist waehrend des Laufs unter `http://127.0.0.1:8090/` erreichbar.
+Die WebUI ist während des Laufs unter `http://127.0.0.1:8090/` erreichbar.
 
 ### Automatisches Fahren
 
@@ -91,7 +95,7 @@ python -m carrera_control.cli drive `
 
 Ohne `--profile` sucht der Drive-Modus automatisch den schnellsten vorhandenen
 Clean-Lap-Snapshot unter `data/training_runs/`. Im Drive-Modus wird das Profil
-nicht weiter gelernt oder veraendert. Sicherheitsabschaltungen und der Pico-
+nicht weiter gelernt oder verändert. Sicherheitsabschaltungen und der Pico-
 Watchdog bleiben aktiv.
 
 ## WebUI
@@ -102,8 +106,8 @@ Die WebUI zeigt:
 - aktuelle, letzte und beste Rundenzeit
 - TrackGraph als Karte
 - Gefahrenstellen als rote Marker mit Anzahl
-- Segmentprofil mit aktuellen Stufen und Aenderungen
-- Clean-Lap- und Unfallzaehler pro Segment
+- Segmentprofil mit aktuellen Stufen und Änderungen
+- Clean-Lap- und Unfallzähler pro Segment
 
 ## Tests
 
@@ -113,4 +117,4 @@ Aus dem Projektordner:
 python -m pytest
 ```
 
-Die Tests fuer dieses Paket liegen im Projektordner unter [tests/](../../tests/).
+Die Tests für dieses Paket liegen im Projektordner unter [tests/](../tests/).
