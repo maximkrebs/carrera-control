@@ -79,6 +79,7 @@ def main() -> None:
             duration_s=args.duration_s,
             port=args.port,
             show_gui=not args.no_gui,
+            web_port=args.web_port,
         )
     print(f"Run saved to: {run_dir}")
 

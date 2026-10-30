@@ -255,13 +255,14 @@ def _update_lap_progress(
         state.valid_lap = True
         _record_event(event_path, elapsed, "lap_invalid", state.last_segment, lap_time)
         return
-    selected = profile.record_clean_lap() if learn else None
     state.lap_count += 1
     state.best_lap_s = lap_time if state.best_lap_s is None else min(state.best_lap_s, lap_time)
-    with lap_path.open("a", newline="", encoding="utf-8") as handle:
-        csv.writer(handle).writerow((state.lap_count, lap_time, state.best_lap_s, selected))
+    # Snapshot before learning so lap-NNNN.json holds the profile that drove this lap.
     if learn:
         save_profile(profile, snapshot_dir / f"lap-{state.lap_count:04d}.json")
+    selected = profile.record_clean_lap() if learn else None
+    with lap_path.open("a", newline="", encoding="utf-8") as handle:
+        csv.writer(handle).writerow((state.lap_count, lap_time, state.best_lap_s, selected))
     _record_event(event_path, elapsed, "clean_lap", state.last_segment, lap_time, selected)
 
 

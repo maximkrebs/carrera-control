@@ -94,3 +94,18 @@ def test_position_maps_to_the_nearest_training_segment() -> None:
     )
 
     assert segment_for_position((10.2, 0.1), graph, 4) == 3
+
+def test_clean_laps_raise_straights_then_corners_then_corner_entries(tmp_path) -> None:
+    graph = TrackGraph(
+        nodes=tuple(TrackNode(float(index), 0.0, 1.0 if index in {4, 10} else 0.0) for index in range(12)),
+        track_length_px=12.0,
+        node_spacing_px=1.0,
+        smoothing_window=1,
+    )
+    profile = create_initial_profile(graph, TrainingConfig(segment_count=12))
+    profile = load_profile(save_profile(profile, tmp_path / "profile.json"))
+
+    order = [profile.record_clean_lap() for _ in range(12)]
+
+    # Corner exits, rest of the straights, corners 4 and 10, entries 3 and 9 last.
+    assert order == [5, 11, 0, 6, 1, 7, 2, 8, 4, 10, 3, 9]

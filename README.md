@@ -69,6 +69,17 @@ python -m carrera_control.cli train `
 
 Die WebUI ist während des Laufs unter `http://127.0.0.1:8090/` erreichbar.
 
+Danach mit dem schnellsten Profil aus allen Trainingsläufen fahren (Best Lap):
+
+```powershell
+python -m carrera_control.cli drive `
+  --track-graph data/recognition_laps/<run>/track_graph.json `
+  --training-root data/training_runs `
+  --output-root data/drive_runs `
+  --duration-s 300 `
+  --web-port 8090
+```
+
 ## Projektstruktur
 
 ```text

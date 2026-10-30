@@ -31,6 +31,7 @@ class TrainingConfig:
     crash_penalty: float = 1.5
     corner_threshold_percentile: float = 0.75
     corner_exit_segments: int = 2
+    corner_entry_segments: int = 1
     crash_search_window_segments: int = 2
     crash_search_expansion_segments: int = 2
     crash_peak_margin: float = 0.5
@@ -47,6 +48,8 @@ class TrainingConfig:
             raise ValueError("corner_threshold_percentile must be between 0.5 and 1.0.")
         if self.corner_exit_segments < 1:
             raise ValueError("corner_exit_segments must be positive.")
+        if self.corner_entry_segments < 0:
+            raise ValueError("corner_entry_segments must not be negative.")
         if self.crash_search_window_segments < 1 or self.crash_search_expansion_segments < 1:
             raise ValueError("crash search window values must be positive.")
         if self.crash_peak_margin < 0:
@@ -68,10 +71,13 @@ class SegmentProfile:
     config: TrainingConfig
     cooldown_laps: list[int] = field(default_factory=list)
     lap_count: int = 0
+    raise_order: list[int] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.cooldown_laps:
             self.cooldown_laps = [0] * self.segment_count
+        if not self.raise_order:
+            self.raise_order = [0] * self.segment_count
 
     @property
     def segment_count(self) -> int:
@@ -96,6 +102,10 @@ class SegmentProfile:
         other segments are not starved of updates forever afterwards. Segments
         still cooling down after a crash are excluded so a reduction isn't
         immediately undone on the very next clean lap.
+
+        Among segments on the same commanded stage, ``raise_order`` decides:
+        straights right after a corner first, corners next, and straights
+        leading into a corner last, because the car cannot brake there.
         """
         self.lap_count += 1
         self._tick_cooldowns()
@@ -114,7 +124,15 @@ class SegmentProfile:
             ]
         if not candidates:
             return None
-        selected = min(candidates, key=lambda index: (self.stages[index], self.accumulated_squared_updates[index], index))
+        selected = min(
+            candidates,
+            key=lambda index: (
+                clamp_stage(self.stages[index]),
+                self.raise_order[index],
+                self.accumulated_squared_updates[index],
+                index,
+            ),
+        )
         self._apply_update(selected, self.learning_rate(selected))
         self.clean_laps[selected] += 1
         return selected
@@ -191,7 +209,13 @@ def create_initial_profile(graph: TrackGraph, config: TrainingConfig | None = No
         relative_curve = 0.0 if reference <= 0 else min(1.0, curvature / reference)
         stage = active_config.initial_stage - active_config.curvature_stage_reduction * relative_curve
         stages.append(max(active_config.minimum_stage, stage))
-    preferred = _corner_exit_segments(mean_curvature, active_config)
+    raise_order = _raise_order(mean_curvature, active_config)
+    # Exits that are themselves corners or corner entries keep their later rank.
+    preferred = [
+        index
+        for index in _corner_exit_segments(mean_curvature, active_config)
+        if raise_order[index] <= active_config.segment_count
+    ]
     return SegmentProfile(
         stages=stages,
         accumulated_squared_updates=[0.0] * active_config.segment_count,
@@ -200,6 +224,7 @@ def create_initial_profile(graph: TrackGraph, config: TrainingConfig | None = No
         incident_sites=[0] * active_config.segment_count,
         preferred_segments=preferred,
         config=active_config,
+        raise_order=raise_order,
     )
 
 
@@ -239,6 +264,7 @@ def save_profile(profile: SegmentProfile, path: str | Path) -> Path:
         "preferred_segments": profile.preferred_segments,
         "cooldown_laps": profile.cooldown_laps,
         "lap_count": profile.lap_count,
+        "raise_order": profile.raise_order,
         "config": profile.config.__dict__,
     }
     output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -259,6 +285,7 @@ def load_profile(path: str | Path) -> SegmentProfile:
         config=config,
         cooldown_laps=[int(value) for value in payload.get("cooldown_laps", [0] * config.segment_count)],
         lap_count=int(payload.get("lap_count", 0)),
+        raise_order=[int(value) for value in payload.get("raise_order", [0] * config.segment_count)],
     )
     if profile.segment_count != config.segment_count:
         raise ValueError("Profile data does not match its segment_count.")
@@ -283,9 +310,35 @@ def _percentile(values: list[float], fraction: float) -> float:
     return ordered[index]
 
 
-def _corner_exit_segments(mean_curvature: list[float], config: TrainingConfig) -> list[int]:
+def _corner_segments(mean_curvature: list[float], config: TrainingConfig) -> list[int]:
     threshold = _percentile(mean_curvature, config.corner_threshold_percentile)
-    corner_segments = [index for index, curvature in enumerate(mean_curvature) if curvature >= threshold and curvature > 0]
+    return [index for index, curvature in enumerate(mean_curvature) if curvature >= threshold and curvature > 0]
+
+
+def _raise_order(mean_curvature: list[float], config: TrainingConfig) -> list[int]:
+    """Rank segments for clean-lap updates; lower ranks are raised first.
+
+    Straights are ranked by their distance to the next corner, furthest first.
+    Corners follow, and the ``corner_entry_segments`` directly before a corner
+    come last.
+    """
+    count = config.segment_count
+    corners = set(_corner_segments(mean_curvature, config))
+    if not corners:
+        return [0] * count
+    order = []
+    for index in range(count):
+        if index in corners:
+            order.append(count + 1)
+            continue
+        distance = next(step for step in range(1, count + 1) if (index + step) % count in corners)
+        group = 2 if distance <= config.corner_entry_segments else 0
+        order.append(group * (count + 1) + count - distance)
+    return order
+
+
+def _corner_exit_segments(mean_curvature: list[float], config: TrainingConfig) -> list[int]:
+    corner_segments = _corner_segments(mean_curvature, config)
     exits = {
         (corner + offset) % config.segment_count
         for corner in corner_segments
