@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     recognition.add_argument("--output-root", type=Path, default=Path("data/recognition_laps"))
     recognition.add_argument("--stage", type=int, default=5)
     recognition.add_argument("--timeout-s", type=float, default=120.0)
-    recognition.add_argument("--port", default="COM4")
+    recognition.add_argument("--port", default="COM3")
     recognition.add_argument("--camera-index", type=int, default=1)
     recognition.add_argument("--no-gui", action="store_true")
 
@@ -35,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     drive.add_argument("--output-root", type=Path, default=Path("data/drive_runs"))
     drive.add_argument("--profile", type=Path, help="optional explicit profile override")
     drive.add_argument("--duration-s", type=float, default=300.0)
-    drive.add_argument("--port", default="COM4")
+    drive.add_argument("--port", default="COM3")
     drive.add_argument("--web-port", type=int)
     drive.add_argument("--no-gui", action="store_true")
     return parser
@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _add_drive_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--track-graph", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, default=Path("data/training_runs"))
-    parser.add_argument("--port", default="COM4")
+    parser.add_argument("--port", default="COM3")
     parser.add_argument("--no-gui", action="store_true")
 
 
